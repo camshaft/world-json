@@ -1,0 +1,118 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+var shapefile = require('shapefile');
+var tsv = require('tsv');
+var Batch = require('batch');
+var countryMapping = getCountryMapping();
+
+var outdir = process.argv[2];
+
+var regions = {
+  'WORLD': []
+};
+
+function onCountry(country) {
+  var props = country.properties;
+  var id = getFirst(props.ISO_A3, props.ADM0_A3);
+  var gn = countryMapping[id];
+  if (typeof id !== 'string' || !(gn > 0)) return;
+
+  // Get rid of antartica. sorry penguins
+  if (gn === 6697173 && !process.env.SAVE_THE_PENGUINS) return;
+
+  regions.WORLD.push({
+    type: 'Feature',
+    properties: {id: gn},
+    geometry: country.geometry
+  });
+
+  regions[gn] = [];
+}
+
+function onState(state) {
+  var props = state.properties;
+  var adm0 = props.adm0_a3;
+  var id = props.gn_id;
+  if (typeof adm0 !== 'string' || !(id > 0)) return;
+
+  var region = regions[countryMapping[adm0]];
+  if (!region) return;
+
+  region.push({
+    type: 'Feature',
+    properties: {id: id},
+    geometry: state.geometry
+  });
+}
+
+function writeRegions(done) {
+  var batch = new Batch();
+  Object.keys(regions).forEach(function(id) {
+    var features = regions[id];
+    if (!features.length) return;
+
+    batch.push(function(cb) {
+      var out = JSON.stringify({
+        type: "FeatureCollection",
+        features: features
+      });
+      fs.writeFile(outdir + '/' + id + '.geojson', out, function(err) {
+        process.stdout.write('.');
+        cb(err);
+      });
+    });
+  });
+
+  batch.end(done);
+}
+
+console.log('===COUNTRIES===');
+readFeatures(process.argv[3], onCountry, function(err) {
+  if (err) throw err;
+
+  console.log('\n===STATES===');
+  readFeatures(process.argv[5], onState, function(err) {
+    if (err) throw err;
+
+    console.log('\n===GEOJSON===');
+    writeRegions(function(err) {
+      if (err) throw err;
+    });
+  });
+});
+
+function readFeatures(file, onrecord, cb) {
+  var reader = shapefile.reader(file, {});
+
+  reader.readHeader(function(err, header) {
+    if (err) return cb(err);
+    read();
+  });
+
+  function read() {
+    reader.readRecord(function(err, record) {
+      if (err) return cb(err);
+      if (record === shapefile.end) return cb();
+      onrecord(record);
+      process.stdout.write('.');
+      read();
+    });
+  }
+}
+
+function getCountryMapping() {
+  var mapping = fs.readFileSync(process.argv[4], 'utf8');
+  return tsv.parse(mapping).reduce(function(acc, row) {
+    if (row.ISO3 && row.geonameid) acc[row.ISO3] = row.geonameid;
+    return acc;
+  }, {});
+}
+
+function getFirst() {
+  for (var i = 0, val, num; i < arguments.length; i++) {
+    val = arguments[i];
+    num = parseInt(val, 10);
+    if (val && (!isNaN(num) ? num > 0 : true)) return val;
+  }
+}

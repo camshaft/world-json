@@ -1,0 +1,28 @@
+{
+  "name": "world-json",
+  "version": "0.1.0",
+  "description": "elixir module for the world in geo.json",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/camshaft/world_json_ex.git"
+  },
+  "author": "Cameron Bytheway <bytheway.cameron@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/camshaft/world_json_ex/issues"
+  },
+  "homepage": "https://github.com/camshaft/world_json_ex",
+  "devDependencies": {
+    "batch": "^0.5.2",
+    "shapefile": "^0.3.0",
+    "topojson": "^1.6.18",
+    "tsv": "^0.2.0"
+  }
+}
