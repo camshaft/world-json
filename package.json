@@ -21,6 +21,7 @@
   "homepage": "https://github.com/camshaft/world_json_ex",
   "devDependencies": {
     "batch": "^0.5.2",
+    "d3": "^3.5.5",
     "shapefile": "^0.3.0",
     "topojson": "^1.6.18",
     "tsv": "^0.2.0"

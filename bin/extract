@@ -2,6 +2,7 @@
 
 var fs = require('fs');
 var shapefile = require('shapefile');
+var d3 = require('d3');
 var tsv = require('tsv');
 var Batch = require('batch');
 var countryMapping = getCountryMapping();
@@ -12,6 +13,8 @@ var regions = {
   'WORLD': []
 };
 
+var bounds = {};
+
 function onCountry(country) {
   var props = country.properties;
   var id = getFirst(props.ISO_A3, props.ADM0_A3);
@@ -21,13 +24,23 @@ function onCountry(country) {
   // Get rid of antartica. sorry penguins
   if (gn === 6697173 && !process.env.SAVE_THE_PENGUINS) return;
 
-  regions.WORLD.push({
+  var feature = {
     type: 'Feature',
     properties: {id: gn},
     geometry: country.geometry
-  });
+  };
+
+  regions.WORLD.push(feature);
+
+  var projection = gn === 6252001 ? d3.geo.albersUsa() : d3.geo.albers();
+  projection
+    .scale(1)
+    .translate([0, 0]);
+  var path = d3.geo.path()
+        .projection(projection);
 
   regions[gn] = [];
+  bounds[gn] = path.bounds(feature);
 }
 
 function onState(state) {
@@ -55,7 +68,8 @@ function writeRegions(done) {
     batch.push(function(cb) {
       var out = JSON.stringify({
         type: "FeatureCollection",
-        features: features
+        features: features,
+        bounds: bounds[id]
       });
       fs.writeFile(outdir + '/' + id + '.geojson', out, function(err) {
         process.stdout.write('.');
