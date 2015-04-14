@@ -76,6 +76,13 @@ function writeRegions(done) {
         cb(err);
       });
     });
+
+    batch.push(function(cb) {
+      var ids = features.map(function(feature) {
+        return feature.properties.id;
+      });
+      fs.writeFile(outdir + '/../ids/' + id + '.json', JSON.stringify(ids), cb);
+    });
   });
 
   batch.end(done);

@@ -1,0 +1,59 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+var Batch = require('batch');
+var pg = require('pg');
+var cldr = require('cldr');
+
+var dir = __dirname + '/../ids';
+var outdir = __dirname + '/../translations';
+
+pg.connect('postgres://@localhost', function(err, client, close) {
+
+  fs.readdir(dir, function(err, files) {
+    var batch = new Batch();
+
+    files.forEach(function(file) {
+      if (file === 'WORLD.json') return handleWorld(batch);
+
+      batch.push(function(cb) {
+        var regions = require(dir + '/' + file);
+        client.query("SELECT geonameid, name FROM geoname WHERE geonameid = ANY('{" + regions + "}'::int[])", function(err, res) {
+          var map = res.rows.reduce(function(acc, row) {
+            acc[row.geonameid] = row.name;
+            return acc;
+          }, {});
+          fs.writeFile(outdir + '/' + file, JSON.stringify(map), cb);
+        })
+      });
+    });
+
+    batch.end(function() {
+      close();
+    });
+  });
+
+  function handleWorld(batch) {
+    var world = require(dir + '/WORLD.json');
+
+    var enNames = cldr.extractTerritoryDisplayNames('en');
+
+    batch.push(function(cb) {
+      var worldBatch = new Batch();
+      client.query("SELECT geonameid, cc FROM geoname WHERE geonameid = ANY('{" + world + "}'::int[])", function(err, res) {
+        cldr.localeIds.forEach(function(locale) {
+          worldBatch.push(function(done) {
+            var names = cldr.extractTerritoryDisplayNames(locale);
+            var out = res.rows.reduce(function(acc, row) {
+              acc[row.geonameid] = names[row.cc] || enNames[row.cc];
+              return acc;
+            }, {});
+            fs.writeFile(outdir + '/WORLD.' + locale + '.json', JSON.stringify(out), done);
+          });
+        });
+        worldBatch.end(cb);
+      });
+    });
+  }
+
+});
