@@ -32,7 +32,7 @@ function onCountry(country) {
 
   regions.WORLD.push(feature);
 
-  var projection = gn === 6252001 ? d3.geo.albersUsa() : d3.geo.albers();
+  var projection = gn === 6252001 ? d3.geo.albersUsa() : d3.geo.equirectangular();
   projection
     .scale(1)
     .translate([0, 0]);
