@@ -47,7 +47,8 @@ function onState(state) {
   var props = state.properties;
   var adm0 = props.adm0_a3;
   var id = props.gn_id;
-  if (typeof adm0 !== 'string' || !(id > 0)) return;
+  if (typeof adm0 !== 'string' || id === -99 || id === 0) return;
+  id = Math.abs(id)
 
   var region = regions[countryMapping[adm0]];
   if (!region) return;
